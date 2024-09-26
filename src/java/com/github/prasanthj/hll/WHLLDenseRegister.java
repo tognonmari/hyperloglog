@@ -48,19 +48,40 @@ public class WHLLDenseRegister extends HLLDenseRegister{
 
         //WEIGHTED VERSION
         double unif01 = (w+1)/(Math.pow(2, 64-p));
-        //System.out.println("I am printing the unif01 value: "+ unif01);
-        double log2Unif = Math.log(unif01)/Math.log(2);
 
-        int toBeInserted = ((int) Math.floor(-log2Unif/weight));
-        System.out.println("The integer i am inserting is : "+ toBeInserted);
-        //System.out.println("I am inserting "+ toBeInserted + "rather than "+ lr);
-        return set(registerIdx, (byte) toBeInserted);
+        double h2Tilde = 1 - Math.pow(1.0 - unif01, 1.0/weight);
+
+        //System.out.println("I am printing the unif01 value: "+ unif01);
+        double log2Unif = Math.log(h2Tilde)/Math.log(2);
+
+        int toBeInserted = ((int) Math.floor(-log2Unif));
+        System.out.println("I am inserting in the registers the value :"+ toBeInserted + ", rather than the tail of trailing 0's : "+ lr);
+        return set(registerIdx, (byte) (toBeInserted + 1));
 
 
     }
 
     //TODO: CHECK computePi for correctness!!
+    public boolean yet_another_add(long hashcode, double weight){
 
+        if( weight<=0){
+            throw new IllegalArgumentException("Weigths must be strictly positive. Provided Weight: "+ weight);
+        }
+
+        // LSB p bits
+        final int registerIdx = (int) (hashcode & (m - 1));
+
+        // MSB 64 - p bits
+
+        final long w = hashcode >>> p;
+
+        double wToDecimal = (double) (w+1)/(Math.pow(2.0,(64-p)));
+        double elevatedW = Math.pow(wToDecimal, 1.0/( weight));
+        long eWToLong = (long) (elevatedW * Math.pow(2.0,(64-p)));
+        long lr = Long.numberOfTrailingZeros(eWToLong)+1;
+        //System.out.println("My rarity Measure is : "+ rarityMeasure);
+        return set(registerIdx, (byte) lr);
+    }
     public boolean my_add(long hashcode, double weight){
         if (weight<= 0){
             throw new IllegalArgumentException("Weights must be stricly positive. Provided weight : "+ weight);
@@ -81,6 +102,7 @@ public class WHLLDenseRegister extends HLLDenseRegister{
         Random rnd = new Random(); //seed is very likely ot be different from one invocation of the constructor to another
         double f = rnd.nextDouble();
         while(f>p_i){
+
             System.out.println("My pi is now  for iteration "+i+" : "+p_i);
             i++;
             p_i = computePi(lr,i,weight);
@@ -88,7 +110,7 @@ public class WHLLDenseRegister extends HLLDenseRegister{
             f = rnd.nextDouble();
         }
         int newTail = lr + i;
-        return set(registerIdx, (byte) (newTail )); //Il + 1 l'ho aggiunto per analogia all'implementazione di base
+        return set(registerIdx, (byte) (newTail)); //Il + 1 l'ho aggiunto per analogia all'implementazione di base
     }
     // this is a lossy invert of the function above, which produces a hashcode
     // which collides with the current winner of the register (we lose all higher
